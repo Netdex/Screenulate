@@ -1,4 +1,4 @@
-﻿namespace Screenulate
+﻿namespace Screenulate.Forms
 {
     partial class ScreenshotForm
     {

@@ -13,14 +13,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
+using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
 using Gma.System.MouseKeyHook;
+using Screenulate.Dict;
+using Screenulate.Forms;
+using Screenulate.Tesseract;
 
 namespace Screenulate
 {
     public partial class Screenulate : Form
     {
-        private string ScreenshotImagePath;
-        private Rectangle LastScreenshotRect;
+        private Rectangle _lastScreenshotRect;
+
+        private JapaneseParser JpParser { get; set; }
 
         public Screenulate()
         {
@@ -29,25 +36,33 @@ namespace Screenulate
 
         private void Screenulate_Load(object sender, EventArgs e)
         {
-            ScreenshotImagePath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
-            Directory.CreateDirectory(ScreenshotImagePath);
             btnLoadTesseractFile.Text = openFileDialogTesseract.FileName;
+
+            JpParser = new JapaneseParser();
+            BeginInvoke((MethodInvoker) JpParser.Load);
 
             Subscribe();
         }
 
         private void btnScreenshot_Click(object sender, EventArgs e)
         {
-            DoProcessing(false);
+            ProcessFrame(false);
         }
 
-        private void DoProcessing(bool instant)
+        public void Screenulate_TextReceived(string text)
+        {
+            ITextTransform transform = new VnTextTransform();
+            var processText = transform.Transform(text);
+            richTextBox.Text = processText;
+        }
+
+        private void ProcessFrame(bool instant)
         {
             if (!btnScreenshot.Enabled)
                 return;
             if (!File.Exists(openFileDialogTesseract.FileName))
             {
-                MessageBox.Show(this, "Tesseract-OCR path not configured!", "Screenulate - Error",
+                MessageBox.Show(this, "Tesseract-OCR path not configured!", "Screenulate",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -55,72 +70,53 @@ namespace Screenulate
             progressBar.Style = ProgressBarStyle.Marquee;
             btnScreenshot.Enabled = false;
 
-            var sf = new ScreenshotForm
-            {
-                Rectangle = LastScreenshotRect
-            };
+            var screenshotForm = new ScreenshotForm {Rectangle = _lastScreenshotRect};
+
             if (instant)
-            {
-                sf.CaptureImage(LastScreenshotRect);
-            }
+                screenshotForm.CaptureImage(_lastScreenshotRect);
             else
-            {
-                sf.ShowDialog(this);
-            }
-            if (sf.Image == null)
+                screenshotForm.ShowDialog(this);
+
+            if (screenshotForm.Bitmap == null)
             {
                 progressBar.Style = ProgressBarStyle.Blocks;
                 btnScreenshot.Enabled = true;
                 return;
             }
 
-            LastScreenshotRect = sf.Rectangle;
+            _lastScreenshotRect = screenshotForm.Rectangle;
 
-            long time = DateTime.Now.ToFileTime();
-            var id = Path.Combine(ScreenshotImagePath, time + "");
-            var imagePath = id + ".png";
-            var textPath = id + ".txt";
+            IImage oldImage = previewBox.Image;
+            previewBox.Image = new Image<Bgr, byte>(screenshotForm.Bitmap);
+            oldImage?.Dispose();
+            var processor = new TesseractProcessor(openFileDialogTesseract.FileName, previewBox.DisplayedImage);
+            processor.Process();
 
-            sf.Image.Save(imagePath);
-
-            var proc = new Process
+            processor.Completed += Processor_Completed;
+            processor.Finished += Processor_Finished;
+            processor.Error += (sender, args) =>
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = openFileDialogTesseract.FileName,
-                    Arguments = $@"""{imagePath}"" ""{id}"" -l jpn --psm 6",
-                    WorkingDirectory = Path.GetDirectoryName(openFileDialogTesseract.FileName),
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                },
-                EnableRaisingEvents = true
+                MessageBox.Show($@"{args.GetException().Message}", "Screenulate", MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             };
-            proc.Start();
+        }
 
-            proc.Exited += (o, args) =>
+        private void Processor_Completed(object sender, TesseractEventArgs args)
+        {
+            IImage oldProcessImage = processBox.Image;
+            processBox.Image = CvInvoke.Imread(args.ProcessImagePath, LoadImageType.Color);
+            oldProcessImage?.Dispose();
+
+            Screenulate_TextReceived(args.Text);
+        }
+
+        private void Processor_Finished(object sender, EventArgs e)
+        {
+            BeginInvoke((MethodInvoker) delegate
             {
-                try
-                {
-                    var text = File.ReadAllText(textPath);
-                    text = text.Substring(0, text.Length - 1);
-
-                    webBrowser.Navigate(
-                        $"https://www.bing.com/translator/?to=en&from=ja&text={HttpUtility.UrlEncode(text)}");
-                    //webBrowser.Navigate(
-                    //$"https://translate.google.com/#ja/en/{HttpUtility.UrlEncode(text)}");
-                }
-                catch
-                {
-                    MessageBox.Show(this, "Error during OCR!", "Screenulate - Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-
-                this.BeginInvoke((MethodInvoker)delegate
-                {
-                    progressBar.Style = ProgressBarStyle.Blocks;
-                    btnScreenshot.Enabled = true;
-                });
-            };
+                progressBar.Style = ProgressBarStyle.Blocks;
+                btnScreenshot.Enabled = true;
+            });
         }
 
         private void btnLoadTesseractFile_Click(object sender, EventArgs e)
@@ -132,30 +128,30 @@ namespace Screenulate
             }
         }
 
-        private IKeyboardMouseEvents m_GlobalHook;
+        private IKeyboardMouseEvents _globalHook;
 
         public void Subscribe()
         {
-            m_GlobalHook = Hook.GlobalEvents();
-            m_GlobalHook.KeyUp += GlobalHookKeyUp;
+            _globalHook = Hook.GlobalEvents();
+            _globalHook.KeyUp += GlobalHookKeyUp;
         }
 
         private void GlobalHookKeyUp(object sender, KeyEventArgs e)
         {
-            if (e.Alt && e.Shift && e.KeyCode == Keys.T)
+            if (e.KeyCode == Keys.Oemtilde)
             {
-                DoProcessing(true);
+                ProcessFrame(true);
             }
-            else if (e.Alt && e.KeyCode == Keys.T)
+            else if (e.Alt && e.KeyCode == Keys.Q)
             {
-                DoProcessing(false);
+                ProcessFrame(false);
             }
         }
 
         public void Unsubscribe()
         {
-            m_GlobalHook.KeyUp -= GlobalHookKeyUp;
-            m_GlobalHook.Dispose();
+            _globalHook.KeyUp -= GlobalHookKeyUp;
+            _globalHook.Dispose();
         }
 
         private void Screenulate_FormClosed(object sender, FormClosedEventArgs e)
