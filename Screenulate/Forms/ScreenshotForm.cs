@@ -50,10 +50,8 @@ namespace Screenulate.Forms
                 var rect = CalculateBounds(_click1, MousePosition);
                 g.DrawRectangle(new Pen(Color.Red, BorderWidth), rect);
             }
-            else if (Rectangle != Rectangle.Empty)
-            {
-                g.DrawRectangle(new Pen(Color.Lime, BorderWidth), Rectangle);
-            }
+            g.DrawRectangle(new Pen(Color.Lime, BorderWidth), Rectangle);
+           
         }
 
         private void ScreenshotForm_KeyUp(object sender, KeyEventArgs e)

@@ -1,33 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.DirectoryServices;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Windows.Forms;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Gma.System.MouseKeyHook;
-using Screenulate.Dict;
 using Screenulate.Forms;
+using Screenulate.NLP;
 using Screenulate.Tesseract;
 
 namespace Screenulate
 {
     public partial class Screenulate : Form
     {
-        private Rectangle _lastScreenshotRect;
-
         private JapaneseParser JpParser { get; set; }
+
+        private Rectangle _lastScreenshotRect;
+        private RikaiForm _rikaiForm;
+
 
         public Screenulate()
         {
@@ -39,7 +31,10 @@ namespace Screenulate
             btnLoadTesseractFile.Text = openFileDialogTesseract.FileName;
 
             JpParser = new JapaneseParser();
-            BeginInvoke((MethodInvoker) JpParser.Load);
+            var jpParserLoadTask = Task.Run(JpParser.Load);
+            jpParserLoadTask.ContinueWith(Screenulate_ParserLoaded);
+
+            var test = Deinflector.Deinflect("されました");
 
             Subscribe();
         }
@@ -47,6 +42,26 @@ namespace Screenulate
         private void btnScreenshot_Click(object sender, EventArgs e)
         {
             ProcessFrame(false);
+        }
+
+        public void Screenulate_ParserLoaded(Task t)
+        {
+            //var test = JpParser.Annotate("新しいコロナウイルスに「アビガン」を使う試験が始まる");
+            BeginInvoke((Action) (() =>
+            {
+                parserLoadProgress.Style = ProgressBarStyle.Blocks;
+                _rikaiForm = new RikaiForm();
+                _rikaiForm.Show(this);
+                _rikaiForm.Value = JpParser.Annotate(richTextBox.Text);
+            }));
+        }
+
+        private void richTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (JpParser.IsLoaded)
+            {
+                _rikaiForm.Value = JpParser.Annotate(richTextBox.Text);
+            }
         }
 
         public void Screenulate_TextReceived(string text)
@@ -67,7 +82,7 @@ namespace Screenulate
                 return;
             }
 
-            progressBar.Style = ProgressBarStyle.Marquee;
+            tesseractProgress.Style = ProgressBarStyle.Marquee;
             btnScreenshot.Enabled = false;
 
             var screenshotForm = new ScreenshotForm {Rectangle = _lastScreenshotRect};
@@ -79,7 +94,7 @@ namespace Screenulate
 
             if (screenshotForm.Bitmap == null)
             {
-                progressBar.Style = ProgressBarStyle.Blocks;
+                tesseractProgress.Style = ProgressBarStyle.Blocks;
                 btnScreenshot.Enabled = true;
                 return;
             }
@@ -92,8 +107,8 @@ namespace Screenulate
             var processor = new TesseractProcessor(openFileDialogTesseract.FileName, previewBox.DisplayedImage);
             processor.Process();
 
-            processor.Completed += Processor_Completed;
-            processor.Finished += Processor_Finished;
+            processor.Completed += TesseractProcessor_Completed;
+            processor.Finished += TesseractProcessor_Finished;
             processor.Error += (sender, args) =>
             {
                 MessageBox.Show($@"{args.GetException().Message}", "Screenulate", MessageBoxButtons.OK,
@@ -101,7 +116,7 @@ namespace Screenulate
             };
         }
 
-        private void Processor_Completed(object sender, TesseractEventArgs args)
+        private void TesseractProcessor_Completed(object sender, TesseractEventArgs args)
         {
             IImage oldProcessImage = processBox.Image;
             processBox.Image = CvInvoke.Imread(args.ProcessImagePath, LoadImageType.Color);
@@ -110,11 +125,12 @@ namespace Screenulate
             Screenulate_TextReceived(args.Text);
         }
 
-        private void Processor_Finished(object sender, EventArgs e)
+        private void TesseractProcessor_Finished(object sender, EventArgs e)
         {
             BeginInvoke((MethodInvoker) delegate
             {
-                progressBar.Style = ProgressBarStyle.Blocks;
+                tesseractProgress.Style = ProgressBarStyle.Blocks;
+                tesseractProgress.Value = 100;
                 btnScreenshot.Enabled = true;
             });
         }

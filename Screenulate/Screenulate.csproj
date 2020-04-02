@@ -83,13 +83,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Dict\JapaneseParser.cs" />
-    <Compile Include="Forms\KanjiForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\KanjiForm.Designer.cs">
-      <DependentUpon>KanjiForm.cs</DependentUpon>
-    </Compile>
+    <Compile Include="NLP\AnnotatedString.cs" />
+    <Compile Include="NLP\Deinflector.cs" />
+    <Compile Include="NLP\JapaneseParser.cs" />
     <Compile Include="Forms\RikaiForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -113,6 +109,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tesseract\TesseractProcessor.cs" />
     <Compile Include="Tesseract\VnTextTransform.cs" />
+    <Compile Include="Utility\ClassEnumeration.cs" />
     <EmbeddedResource Include="Forms\RikaiForm.resx">
       <DependentUpon>RikaiForm.cs</DependentUpon>
     </EmbeddedResource>

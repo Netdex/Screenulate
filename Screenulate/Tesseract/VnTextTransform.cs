@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Screenulate.Tesseract
+﻿namespace Screenulate.Tesseract
 {
     class VnTextTransform : ITextTransform
     {
