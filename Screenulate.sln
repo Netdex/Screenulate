@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Screenulate", "Screenulate\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Screenulate.Tests", "Screenulate.Tests\Screenulate.Tests.csproj", "{3C6F17AC-AA2B-4418-B33D-B6E499F0F38D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTrie", "Dependencies\trie\src\KTrie\KTrie.csproj", "{6337A259-B223-4B5C-B06E-10F0411A1BDD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTrie.Tests", "Dependencies\trie\src\KTrie.Tests\KTrie.Tests.csproj", "{7036070D-B098-42D1-8777-134EB42FD2F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{3C6F17AC-AA2B-4418-B33D-B6E499F0F38D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C6F17AC-AA2B-4418-B33D-B6E499F0F38D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C6F17AC-AA2B-4418-B33D-B6E499F0F38D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6337A259-B223-4B5C-B06E-10F0411A1BDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6337A259-B223-4B5C-B06E-10F0411A1BDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6337A259-B223-4B5C-B06E-10F0411A1BDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6337A259-B223-4B5C-B06E-10F0411A1BDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7036070D-B098-42D1-8777-134EB42FD2F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7036070D-B098-42D1-8777-134EB42FD2F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7036070D-B098-42D1-8777-134EB42FD2F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7036070D-B098-42D1-8777-134EB42FD2F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
