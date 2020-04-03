@@ -1,0 +1,3 @@
+[submodule "Dependencies/trie"]
+	path = Dependencies/trie
+	url = https://github.com/Netdex/trie.git
