@@ -26,7 +26,7 @@ namespace Screenulate.Utility
             public int Index { get; set; }
         }
 
-        private static readonly Lazy<FieldInfo[]> LazyFields = new Lazy<FieldInfo[]>(EnumerateFields);
+        private static readonly FieldInfo[] Fields = EnumerateFields();
         private static readonly Lazy<T[]> LazyObjects = new Lazy<T[]>(EnumerateObjects);
         public static T[] Values => LazyObjects.Value;
 
@@ -43,7 +43,7 @@ namespace Screenulate.Utility
         {
             int i = 0;
             FieldInfo matchingField = null;
-            foreach (var field in LazyFields.Value)
+            foreach (var field in Fields)
             {
                 if (ReferenceEquals(field.GetValue(null), this))
                 {
@@ -66,7 +66,7 @@ namespace Screenulate.Utility
 
         private static T[] EnumerateObjects()
         {
-            return LazyFields.Value.Select(f => f.GetValue(null)).Cast<T>().ToArray();
+            return Fields.Select(f => f.GetValue(null)).Cast<T>().ToArray();
         }
 
         private static FieldInfo[] EnumerateFields()

@@ -34,8 +34,6 @@ namespace Screenulate
             var jpParserLoadTask = Task.Run(JpParser.Load);
             jpParserLoadTask.ContinueWith(Screenulate_ParserLoaded);
 
-            var test = Deinflector.Deinflect("されました");
-
             Subscribe();
         }
 

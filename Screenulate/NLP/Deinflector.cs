@@ -62,6 +62,8 @@ namespace Screenulate.NLP
                 TypeMask = typeMask;
                 Reason = reason;
             }
+
+            public override string ToString() => $"{Reason} ({From} => {To})";
         }
 
         public class DeinflectedString : IComparable<DeinflectedString>
@@ -78,12 +80,13 @@ namespace Screenulate.NLP
 
             public bool TryTransform(Inflection inflection, out DeinflectedString newValue)
             {
-                if (Text.EndsWith(inflection.From) && (TypeMask & inflection.TypeMask) != 0)
+                // Note: Using culture-sensitive string comparisons for this is horribly slow.
+                if (Text.EndsWith(inflection.From, StringComparison.Ordinal) && (TypeMask & inflection.TypeMask) != 0)
                 {
                     newValue = new DeinflectedString()
                     {
                         Text = Text.Substring(0, Text.Length - inflection.From.Length) + inflection.To,
-                        TypeMask = inflection.TypeMask << 8
+                        TypeMask = inflection.TypeMask >> 8
                     };
                     newValue.Inflections.AddRange(Inflections);
                     newValue.Inflections.Add(inflection);
@@ -100,12 +103,14 @@ namespace Screenulate.NLP
                 if (ReferenceEquals(null, other)) return 1;
                 return string.Compare(Text, other.Text, StringComparison.Ordinal);
             }
+
+            public override string ToString() => Text;
         }
 
         public static IEnumerable<DeinflectedString> Deinflect(string text)
         {
-            SortedSet<DeinflectedString> intermediates = new SortedSet<DeinflectedString>();
-            intermediates.Add(new DeinflectedString() {Text = text});
+            var seed = new DeinflectedString() {Text = text};
+            SortedSet<DeinflectedString> intermediates = new SortedSet<DeinflectedString> {seed};
 
             bool changed = true;
             while (changed)
@@ -127,9 +132,17 @@ namespace Screenulate.NLP
                     deinflected.Terminal = true;
                 }
 
-                intermediates.UnionWith(pendingStrings);
+                foreach (var deinflected in pendingStrings)
+                {
+                    bool alreadyExists = intermediates.TryGetValue(deinflected, out var actualValue);
+                    if (alreadyExists)
+                        actualValue.TypeMask |= deinflected.TypeMask;
+                    else
+                        intermediates.Add(deinflected);
+                }
             }
 
+            intermediates.Remove(seed);
             return intermediates;
         }
 

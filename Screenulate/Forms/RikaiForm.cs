@@ -72,7 +72,7 @@ namespace Screenulate.Forms
                 _lastIndex = index;
 
                 var tokens = Value.JapaneseTokens[index];
-                int bestLength = tokens.FirstOrDefault()?.Length ?? 0;
+                int bestLength = tokens.FirstOrDefault()?.Text.Length?? 0;
                 if (bestLength > 0)
                 {
                     richTextBox.Select(index, bestLength);

@@ -67,22 +67,17 @@ namespace Screenulate.NLP
             AnnotatedString annotatedString = new AnnotatedString(text);
             for (int i = 0; i < text.Length; ++i)
             {
-                annotatedString.JapaneseTokens[i] = new List<AnnotatedString.JapaneseToken>();
-                for (int j = 1; j < text.Length - i; ++j)
+                annotatedString.JapaneseTokens[i] = new List<JapaneseToken>();
+                var jpTokens = annotatedString.JapaneseTokens[i];
+                for (int j = 1; j <= text.Length - i; ++j)
                 {
                     string substr = text.Substring(i, j);
-                    if (JpKanjiTrie.TryGetValue(substr, out var kanjiEntries))
+                    if (TryTokenize(substr, out var tokens))
+                        jpTokens.AddRange(tokens);
+                    foreach (var deinflectedString in Deinflector.Deinflect(substr))
                     {
-                        annotatedString.JapaneseTokens[i].AddRange(kanjiEntries.Select(
-                            x => new AnnotatedString.JapaneseToken(i, j,
-                                x.Item2, x.Item1)));
-                    }
-
-                    if (JpReadingTrie.TryGetValue(substr, out var readingEntries))
-                    {
-                        annotatedString.JapaneseTokens[i].AddRange(readingEntries.Select(
-                            x => new AnnotatedString.JapaneseToken(i, j,
-                                x.Item2, x.Item1)));
+                        if (TryTokenize(substr, deinflectedString, out var deinflectTokens))
+                            jpTokens.AddRange(deinflectTokens);
                     }
                 }
 
@@ -90,6 +85,46 @@ namespace Screenulate.NLP
             }
 
             return annotatedString;
+        }
+
+        public bool TryTokenize(string text, out IEnumerable<JapaneseToken> tokens)
+        {
+            if (JpKanjiTrie.TryGetValue(text, out var kanjiEntries))
+            {
+                tokens = kanjiEntries.Select(x => new JapaneseToken(text, x.Item2, x.Item1));
+                return true;
+            }
+
+            if (JpReadingTrie.TryGetValue(text, out var readingEntries))
+            {
+                tokens = readingEntries.Select(x => new JapaneseToken(text, x.Item2, x.Item1));
+                return true;
+            }
+
+            tokens = Enumerable.Empty<JapaneseToken>();
+            return false;
+        }
+
+        public bool TryTokenize(string source, Deinflector.DeinflectedString deinflected,
+            out IEnumerable<JapaneseToken> tokens)
+        {
+            if (JpKanjiTrie.TryGetValue(deinflected.Text, out var kanjiEntries))
+            {
+                tokens = kanjiEntries.Select(x => 
+                    new JapaneseToken(source, x.Item2, x.Item1, deinflected.Inflections));
+                return true;
+            }
+
+            if (JpReadingTrie.TryGetValue(deinflected.Text, out var readingEntries))
+            {
+                tokens = readingEntries.Select(
+                    x => 
+                        new JapaneseToken(source, x.Item2, x.Item1, deinflected.Inflections));
+                return true;
+            }
+
+            tokens = Enumerable.Empty<JapaneseToken>();
+            return false;
         }
     }
 }
